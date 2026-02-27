@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Research KISSer</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Cabinet+Grotesk:wght@400;500;700;800;900&display=swap');
+
+    :root {
+      --bg: #0a0a0f;
+      --surface: #111118;
+      --surface2: #1a1a24;
+      --border: #2a2a3a;
+      --accent: #7c3aed;
+      --accent2: #a855f7;
+      --accent3: #06b6d4;
+      --text: #e8e8f0;
+      --muted: #6b6b8a;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Cabinet Grotesk', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* NOISE TEXTURE */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.4;
+    }
+
+    /* HEADER */
+    header {
+      position: relative;
+      z-index: 10;
+      padding: 2rem 3rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1.5rem;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .logo-kiss { color: var(--accent2); }
+    .logo-er { color: var(--text); }
+
+    .logo-tag {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.6rem;
+      color: var(--muted);
+      background: var(--surface2);
+      padding: 0.2rem 0.5rem;
+      border-radius: 3px;
+      border: 1px solid var(--border);
+      letter-spacing: 0.05em;
+    }
+
+    .header-right {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    /* HERO */
+    .hero {
+      position: relative;
+      z-index: 10;
+      padding: 5rem 3rem 4rem;
+      max-width: 900px;
+    }
+
+    .hero-eyebrow {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--accent3);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .hero-eyebrow::before {
+      content: '';
+      display: block;
+      width: 2rem;
+      height: 1px;
+      background: var(--accent3);
+    }
+
+    h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(2.5rem, 6vw, 5rem);
+      font-weight: 800;
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+      margin-bottom: 1.5rem;
+    }
+
+    h1 .highlight {
+      background: linear-gradient(135deg, var(--accent2), var(--accent3));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-sub {
+      font-size: 1.1rem;
+      color: var(--muted);
+      max-width: 560px;
+      line-height: 1.7;
+    }
+
+    /* MAIN LAYOUT */
+    .app-shell {
+      position: relative;
+      z-index: 10;
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 0;
+      min-height: calc(100vh - 200px);
+      border-top: 1px solid var(--border);
+    }
+
+    /* LEFT PANEL */
+    .left-panel {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    .panel-section h3 {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* UPLOAD ZONE */
+    .upload-zone {
+      border: 1.5px dashed var(--border);
+      border-radius: 12px;
+      padding: 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: var(--surface2);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .upload-zone:hover, .upload-zone.dragover {
+      border-color: var(--accent);
+      background: rgba(124, 58, 237, 0.05);
+    }
+
+    .upload-zone.has-file {
+      border-color: var(--success);
+      border-style: solid;
+      background: rgba(16, 185, 129, 0.05);
+    }
+
+    .upload-icon {
+      font-size: 2rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .upload-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .upload-sub {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .upload-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .file-info {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      font-size: 0.85rem;
+    }
+
+    .file-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      flex-shrink: 0;
+    }
+
+    /* AUDIENCE MODES */
+    .mode-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.6rem;
+    }
+
+    .mode-btn {
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 0.75rem 0.5rem;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.18s ease;
+      color: var(--text);
+      font-family: 'Cabinet Grotesk', sans-serif;
+    }
+
+    .mode-btn:hover {
+      border-color: var(--accent);
+      background: rgba(124, 58, 237, 0.08);
+      transform: translateY(-1px);
+    }
+
+    .mode-btn.active {
+      border-color: var(--accent2);
+      background: rgba(168, 85, 247, 0.12);
+      box-shadow: 0 0 0 1px rgba(168, 85, 247, 0.3);
+    }
+
+    .mode-emoji { font-size: 1.4rem; display: block; margin-bottom: 0.3rem; }
+    .mode-label { font-size: 0.75rem; font-weight: 700; display: block; }
+    .mode-desc { font-size: 0.65rem; color: var(--muted); display: block; margin-top: 0.15rem; }
+
+    /* API KEY INPUT */
+    .api-input-wrap {
+      position: relative;
+    }
+
+    .api-input {
+      width: 100%;
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 0.75rem 3rem 0.75rem 1rem;
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.8rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .api-input:focus { border-color: var(--accent); }
+    .api-input::placeholder { color: var(--muted); }
+
+    .api-toggle {
+      position: absolute;
+      right: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1rem;
+      color: var(--muted);
+    }
+
+    /* GENERATE BUTTON */
+    .generate-btn {
+      width: 100%;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: none;
+      border-radius: 10px;
+      padding: 1rem 1.5rem;
+      color: white;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+      letter-spacing: 0.02em;
+    }
+
+    .generate-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(124, 58, 237, 0.4);
+    }
+
+    .generate-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .generate-btn.loading::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+      animation: shimmer 1.2s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+
+    /* RIGHT PANEL */
+    .right-panel {
+      padding: 2.5rem 3rem;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+      overflow-y: auto;
+    }
+
+    /* EMPTY STATE */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      min-height: 400px;
+      gap: 1.5rem;
+      opacity: 0.5;
+    }
+
+    .empty-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 80px);
+      grid-template-rows: repeat(2, 50px);
+      gap: 8px;
+    }
+
+    .empty-cell {
+      border-radius: 6px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    .empty-cell:nth-child(2) { animation-delay: 0.2s; }
+    .empty-cell:nth-child(3) { animation-delay: 0.4s; }
+    .empty-cell:nth-child(4) { animation-delay: 0.6s; }
+    .empty-cell:nth-child(5) { animation-delay: 0.8s; }
+    .empty-cell:nth-child(6) { animation-delay: 1s; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 0.9; }
+    }
+
+    .empty-text {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    /* SLIDES OUTPUT */
+    .slides-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .slides-header h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    .slide-count-badge {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--accent2);
+      background: rgba(168, 85, 247, 0.12);
+      border: 1px solid rgba(168, 85, 247, 0.3);
+      padding: 0.3rem 0.75rem;
+      border-radius: 20px;
+    }
+
+    /* SLIDE CARD */
+    .slide-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      transition: border-color 0.2s;
+      animation: slideIn 0.4s ease forwards;
+      opacity: 0;
+      transform: translateY(12px);
+    }
+
+    .slide-card:hover { border-color: var(--accent); }
+
+    @keyframes slideIn {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .slide-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface2);
+    }
+
+    .slide-num {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--muted);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.2rem 0.5rem;
+      flex-shrink: 0;
+    }
+
+    .slide-title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 0.95rem;
+      flex: 1;
+    }
+
+    .slide-type-badge {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .badge-diagram { background: rgba(6, 182, 212, 0.15); color: var(--accent3); border: 1px solid rgba(6, 182, 212, 0.3); }
+    .badge-chart { background: rgba(245, 158, 11, 0.15); color: var(--warning); border: 1px solid rgba(245, 158, 11, 0.3); }
+    .badge-content { background: rgba(168, 85, 247, 0.15); color: var(--accent2); border: 1px solid rgba(168, 85, 247, 0.3); }
+    .badge-title { background: rgba(16, 185, 129, 0.15); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.3); }
+
+    .slide-body {
+      padding: 1.5rem;
+    }
+
+    .slide-content-text {
+      font-size: 0.9rem;
+      line-height: 1.7;
+      color: var(--text);
+      margin-bottom: 1.25rem;
+    }
+
+    .slide-content-text ul {
+      padding-left: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .slide-notes {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--muted);
+      background: var(--surface2);
+      border-left: 3px solid var(--accent);
+      padding: 0.75rem 1rem;
+      border-radius: 0 6px 6px 0;
+      margin-top: 1rem;
+    }
+
+    .slide-notes::before {
+      content: '// speaker note';
+      display: block;
+      color: var(--accent);
+      margin-bottom: 0.4rem;
+      font-size: 0.65rem;
+    }
+
+    /* MERMAID */
+    .mermaid-wrap {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.5rem;
+      overflow-x: auto;
+    }
+
+    .mermaid {
+      display: flex;
+      justify-content: center;
+    }
+
+    .mermaid svg {
+      max-width: 100%;
+    }
+
+    /* PROGRESS LOG */
+    .progress-log {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .log-line {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.78rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.6rem;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: none; } }
+
+    .log-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      margin-top: 0.35rem;
+      flex-shrink: 0;
+    }
+
+    .log-dot.done { background: var(--success); }
+    .log-dot.working { background: var(--warning); animation: blink 0.8s infinite; }
+    .log-dot.error { background: var(--danger); }
+
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
+
+    .log-text { color: var(--muted); line-height: 1.4; }
+    .log-text.active { color: var(--text); }
+
+    /* DOWNLOAD BAR */
+    .download-bar {
+      display: flex;
+      gap: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .dl-btn {
+      flex: 1;
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 0.8rem 1rem;
+      color: var(--text);
+      font-family: 'Cabinet Grotesk', sans-serif;
+      font-weight: 700;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.18s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .dl-btn:hover {
+      border-color: var(--accent2);
+      background: rgba(168, 85, 247, 0.08);
+    }
+
+    .dl-btn.primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-color: transparent;
+      color: white;
+    }
+
+    .dl-btn.primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 15px rgba(124, 58, 237, 0.35);
+    }
+
+    /* GLOWING ORB BACKGROUND */
+    .bg-orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.15;
+    }
+
+    .orb-1 {
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, var(--accent), transparent);
+      top: -200px;
+      right: -200px;
+    }
+
+    .orb-2 {
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, var(--accent3), transparent);
+      bottom: -150px;
+      left: 100px;
+    }
+
+    /* SCROLLBAR */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ERROR TOAST */
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: var(--danger);
+      color: white;
+      padding: 1rem 1.5rem;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      z-index: 999;
+      animation: toastIn 0.3s ease;
+      max-width: 400px;
+    }
+
+    @keyframes toastIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+    /* RESPONSIVE */
+    @media (max-width: 900px) {
+      .app-shell { grid-template-columns: 1fr; }
+      .left-panel { border-right: none; border-bottom: 1px solid var(--border); }
+      header { padding: 1.5rem; }
+      .hero { padding: 3rem 1.5rem 2rem; }
+      .right-panel { padding: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="bg-orb orb-1"></div>
+  <div class="bg-orb orb-2"></div>
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      <span>Research</span>
+      <span class="logo-kiss">KISS</span><span class="logo-er">er</span>
+      <span class="logo-tag">KEEP IT SIMPLE STUPID</span>
+    </div>
+    <div class="header-right">AI · PDF → PPTX · Mermaid.js</div>
+  </header>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-eyebrow">Research Translator</div>
+    <h1>Make your research<br><span class="highlight">actually understood.</span></h1>
+    <p class="hero-sub">Upload your research PDF. Pick your audience. Get a presentation with diagrams, charts, and explanations tuned to who's in the room.</p>
+  </div>
+
+  <!-- APP SHELL -->
+  <div class="app-shell">
+
+    <!-- LEFT PANEL -->
+    <div class="left-panel">
+
+      <!-- UPLOAD -->
+      <div class="panel-section">
+        <h3>01 — Upload Research</h3>
+        <div class="upload-zone" id="uploadZone">
+          <input type="file" id="pdfInput" accept=".pdf,.txt" />
+          <div class="upload-icon">📄</div>
+          <div class="upload-title">Drop your PDF here</div>
+          <div class="upload-sub">or click to browse · PDF or TXT</div>
+        </div>
+        <div class="file-info" id="fileInfo" style="display:none;">
+          <div class="file-dot"></div>
+          <span id="fileName"></span>
+        </div>
+      </div>
+
+      <!-- AUDIENCE MODE -->
+      <div class="panel-section">
+        <h3>02 — Select Audience</h3>
+        <div class="mode-grid">
+          <button class="mode-btn active" data-mode="dumbass" onclick="selectMode(this)">
+            <span class="mode-emoji">🤡</span>
+            <span class="mode-label">Dumbass</span>
+            <span class="mode-desc">Zero jargon, pure analogies</span>
+          </button>
+          <button class="mode-btn" data-mode="kid" onclick="selectMode(this)">
+            <span class="mode-emoji">👦</span>
+            <span class="mode-label">Kid / Student</span>
+            <span class="mode-desc">Fun, visual, simple</span>
+          </button>
+          <button class="mode-btn" data-mode="parent" onclick="selectMode(this)">
+            <span class="mode-emoji">👨‍👩‍👧</span>
+            <span class="mode-label">Parent / Public</span>
+            <span class="mode-desc">Real-world relevance</span>
+          </button>
+          <button class="mode-btn" data-mode="professor" onclick="selectMode(this)">
+            <span class="mode-emoji">👩‍🏫</span>
+            <span class="mode-label">Professor</span>
+            <span class="mode-desc">Full methodology rigor</span>
+          </button>
+          <button class="mode-btn" data-mode="investor" onclick="selectMode(this)">
+            <span class="mode-emoji">💰</span>
+            <span class="mode-label">Investor / VC</span>
+            <span class="mode-desc">ROI, novelty, market</span>
+          </button>
+          <button class="mode-btn" data-mode="peer" onclick="selectMode(this)">
+            <span class="mode-emoji">🧑‍🔬</span>
+            <span class="mode-label">Peer Researcher</span>
+            <span class="mode-desc">Technical depth, gaps</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- API KEY -->
+      <div class="panel-section">
+        <h3>03 — API Key (Claude)</h3>
+        <div class="api-input-wrap">
+          <input
+            type="password"
+            id="apiKey"
+            class="api-input"
+            placeholder="sk-ant-api03-..."
+          />
+          <button class="api-toggle" onclick="toggleApiKey()">👁</button>
+        </div>
+      </div>
+
+      <!-- GENERATE -->
+      <div class="panel-section">
+        <button class="generate-btn" id="generateBtn" onclick="generate()" disabled>
+          ✦ Generate Presentation
+        </button>
+      </div>
+
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="right-panel" id="rightPanel">
+
+      <!-- EMPTY STATE -->
+      <div class="empty-state" id="emptyState">
+        <div class="empty-grid">
+          <div class="empty-cell"></div>
+          <div class="empty-cell" style="grid-column: span 2;"></div>
+          <div class="empty-cell" style="grid-column: span 2;"></div>
+          <div class="empty-cell"></div>
+        </div>
+        <div class="empty-text">
+          Upload a PDF + select an audience<br>to generate your presentation
+        </div>
+      </div>
+
+      <!-- OUTPUT (hidden until generated) -->
+      <div id="outputArea" style="display:none; display:flex; flex-direction:column; gap:2rem; display:none;">
+
+        <!-- PROGRESS LOG -->
+        <div class="progress-log" id="progressLog"></div>
+
+        <!-- SLIDES -->
+        <div id="slidesArea"></div>
+
+        <!-- DOWNLOAD BAR -->
+        <div class="download-bar" id="downloadBar" style="display:none;">
+          <button class="dl-btn" onclick="copyJSON()">📋 Copy JSON</button>
+          <button class="dl-btn" onclick="copyMermaid()">🔀 Copy Diagrams</button>
+          <button class="dl-btn primary" onclick="downloadPPTX()">⬇ Download .pptx</button>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // ─── STATE ───────────────────────────────────────────────────────────────
+    let selectedMode = 'dumbass';
+    let uploadedText = '';
+    let generatedSlides = [];
+    let mermaidDiagrams = [];
+
+    // ─── MERMAID INIT ─────────────────────────────────────────────────────────
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'dark',
+      themeVariables: {
+        primaryColor: '#7c3aed',
+        primaryTextColor: '#e8e8f0',
+        primaryBorderColor: '#a855f7',
+        lineColor: '#6b6b8a',
+        secondaryColor: '#1a1a24',
+        tertiaryColor: '#111118',
+        background: '#0a0a0f',
+        nodeBorder: '#2a2a3a',
+        clusterBkg: '#1a1a24',
+        titleColor: '#e8e8f0',
+        edgeLabelBackground: '#1a1a24',
+        activeTaskBkgColor: '#7c3aed',
+        activeTaskBorderColor: '#a855f7',
+      }
+    });
+
+    // ─── MODE SELECTION ───────────────────────────────────────────────────────
+    function selectMode(btn) {
+      document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedMode = btn.dataset.mode;
+    }
+
+    // ─── FILE UPLOAD ──────────────────────────────────────────────────────────
+    const uploadZone = document.getElementById('uploadZone');
+    const pdfInput = document.getElementById('pdfInput');
+
+    uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+    uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+    uploadZone.addEventListener('drop', e => {
+      e.preventDefault();
+      uploadZone.classList.remove('dragover');
+      if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+    });
+
+    pdfInput.addEventListener('change', e => {
+      if (e.target.files[0]) handleFile(e.target.files[0]);
+    });
+
+    async function handleFile(file) {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        uploadedText = e.target.result;
+        if (file.name.endsWith('.pdf')) {
+          // For PDF, we just use the raw text (in production, use pdf.js or server-side)
+          uploadedText = `[PDF Content from: ${file.name}]\n\n` + e.target.result.slice(0, 8000);
+        }
+        uploadZone.classList.add('has-file');
+        document.getElementById('fileInfo').style.display = 'flex';
+        document.getElementById('fileName').textContent = file.name + ` (${(file.size / 1024).toFixed(1)} KB)`;
+        checkReady();
+      };
+      reader.readAsText(file);
+    }
+
+    function checkReady() {
+      const hasFile = uploadedText.length > 0;
+      const hasKey = document.getElementById('apiKey').value.trim().length > 10;
+      document.getElementById('generateBtn').disabled = !(hasFile && hasKey);
+    }
+
+    document.getElementById('apiKey').addEventListener('input', checkReady);
+
+    function toggleApiKey() {
+      const input = document.getElementById('apiKey');
+      input.type = input.type === 'password' ? 'text' : 'password';
+    }
+
+    // ─── PROGRESS LOG ─────────────────────────────────────────────────────────
+    function log(msg, status = 'done') {
+      const log = document.getElementById('progressLog');
+      const line = document.createElement('div');
+      line.className = 'log-line';
+      line.innerHTML = `<div class="log-dot ${status}"></div><div class="log-text ${status === 'working' ? 'active' : ''}">${msg}</div>`;
+      log.appendChild(line);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function clearLog() {
+      document.getElementById('progressLog').innerHTML = '';
+    }
+
+    // ─── SYSTEM PROMPTS BY MODE ───────────────────────────────────────────────
+    const modePrompts = {
+      dumbass: `You are explaining research to someone who knows absolutely nothing about the topic. Use everyday analogies, avoid ALL jargon, and make it entertaining. If you must use a technical term, explain it like they're 10 years old. Focus on the big picture: WHY does this matter in real life?`,
+
+      kid: `You are explaining research to a curious 12-year-old student. Use fun comparisons, relatable examples (games, food, sports), short sentences. Make it feel like a discovery adventure. Use enthusiastic language.`,
+
+      parent: `You are explaining research to a parent or general public member. Focus on real-world impact: how does this research affect everyday life? What problem does it solve? Use relatable examples. Avoid equations and jargon. Lead with why it matters.`,
+
+      professor: `You are presenting to a professor outside this specific subfield. Include methodological rigor, assumptions made, limitations, and how this fits in the broader academic landscape. You can use technical language but define subdomain-specific terms. Mention related work briefly.`,
+
+      investor: `You are pitching to a venture capitalist or sponsor. Lead with the problem size and market opportunity. Emphasize novelty and defensibility. Quantify impact wherever possible. End with a clear ask or next step. Be concise and punchy—every sentence must earn its place.`,
+
+      peer: `You are presenting to a fellow researcher in a related field. Go deep on methodology, data sources, statistical approach, and open questions. Discuss what's novel vs. what builds on prior work. Mention gaps and future directions.`
+    };
+
+    // ─── MAIN GENERATE ────────────────────────────────────────────────────────
+    async function generate() {
+      const apiKey = document.getElementById('apiKey').value.trim();
+      if (!apiKey || !uploadedText) return;
+
+      const btn = document.getElementById('generateBtn');
+      btn.disabled = true;
+      btn.classList.add('loading');
+      btn.textContent = '⏳ Generating...';
+
+      document.getElementById('emptyState').style.display = 'none';
+      const outputArea = document.getElementById('outputArea');
+      outputArea.style.display = 'flex';
+      outputArea.style.flexDirection = 'column';
+      outputArea.style.gap = '2rem';
+      document.getElementById('slidesArea').innerHTML = '';
+      document.getElementById('downloadBar').style.display = 'none';
+      clearLog();
+
+      log('Reading research content...', 'done');
+      log(`Audience mode: ${selectedMode}`, 'done');
+      log('Calling Claude API...', 'working');
+
+      try {
+        const result = await callClaude(apiKey);
+        clearLog();
+        log('Research parsed ✓', 'done');
+        log('Slides structured ✓', 'done');
+        log('Mermaid diagrams generated ✓', 'done');
+        log('Rendering output...', 'working');
+
+        generatedSlides = result.slides;
+        mermaidDiagrams = result.slides.filter(s => s.mermaid).map(s => s.mermaid);
+
+        await renderSlides(result.slides);
+
+        clearLog();
+        log(`✓ ${result.slides.length} slides generated`, 'done');
+        log(`✓ ${mermaidDiagrams.length} Mermaid diagram(s) rendered`, 'done');
+        log(`✓ Audience: ${selectedMode}`, 'done');
+
+        document.getElementById('downloadBar').style.display = 'flex';
+
+      } catch (err) {
+        clearLog();
+        log('Error: ' + err.message, 'error');
+        showToast(err.message);
+      }
+
+      btn.disabled = false;
+      btn.classList.remove('loading');
+      btn.textContent = '✦ Generate Presentation';
+    }
+
+    // ─── CLAUDE API CALL ──────────────────────────────────────────────────────
+    async function callClaude(apiKey) {
+      const modeInstruction = modePrompts[selectedMode];
+
+      const systemPrompt = `You are Research KISSer, an AI that transforms dense academic research into clear, audience-specific presentations.
+
+${modeInstruction}
+
+You must respond with ONLY valid JSON (no markdown, no backticks, no extra text) in this exact structure:
+
+{
+  "title": "presentation title",
+  "slides": [
+    {
+      "num": 1,
+      "type": "title",
+      "title": "slide title",
+      "content": "main content text or bullet points as a string (use \\n• for bullets)",
+      "speakerNote": "what the presenter should say",
+      "mermaid": null
+    },
+    {
+      "num": 2,
+      "type": "diagram",
+      "title": "slide title",
+      "content": "brief explanation of the diagram",
+      "speakerNote": "what the presenter should say",
+      "mermaid": "flowchart TD\\n  A[Start] --> B[Process]\\n  B --> C[End]"
+    }
+  ]
+}
+
+Rules:
+- Generate exactly 6-8 slides
+- Slide types: "title", "content", "diagram", "chart"
+- At least 2 slides must have a mermaid diagram (set mermaid field to valid Mermaid.js syntax)
+- Mermaid diagrams must use: flowchart TD, mindmap, sequenceDiagram, or xychart-beta
+- For xychart-beta use format: xychart-beta\\n  title "..."\\n  x-axis [labels]\\n  y-axis "label"\\n  bar [values]
+- All Mermaid node text must be simple (no special chars that break parsing)
+- Adapt ALL content to the selected audience mode
+- speakerNote should be 1-2 sentences max
+- Keep content focused and punchy for the audience`;
+
+      const userMsg = `Here is the research content to transform into a presentation:
+
+---
+${uploadedText.slice(0, 6000)}
+---
+
+Generate a ${selectedMode}-mode presentation with Mermaid.js diagrams. Remember: JSON only, no markdown.`;
+
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-calls': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-opus-4-6',
+          max_tokens: 4000,
+          system: systemPrompt,
+          messages: [{ role: 'user', content: userMsg }]
+        })
+      });
+
+      if (!resp.ok) {
+        const err = await resp.json();
+        throw new Error(err.error?.message || `API error ${resp.status}`);
+      }
+
+      const data = await resp.json();
+      const text = data.content[0].text.trim();
+
+      // Strip any accidental markdown fences
+      const cleaned = text.replace(/^```json\n?/, '').replace(/^```\n?/, '').replace(/\n?```$/, '').trim();
+
+      try {
+        return JSON.parse(cleaned);
+      } catch (e) {
+        // Try to extract JSON from the text
+        const match = cleaned.match(/\{[\s\S]*\}/);
+        if (match) return JSON.parse(match[0]);
+        throw new Error('Failed to parse AI response as JSON. Try again.');
+      }
+    }
+
+    // ─── RENDER SLIDES ────────────────────────────────────────────────────────
+    async function renderSlides(slides) {
+      const area = document.getElementById('slidesArea');
+      area.innerHTML = '';
+
+      // Add slides header
+      const header = document.createElement('div');
+      header.className = 'slides-header';
+      header.innerHTML = `<h2>Generated Slides</h2><span class="slide-count-badge">${slides.length} slides</span>`;
+      area.appendChild(header);
+
+      for (let i = 0; i < slides.length; i++) {
+        const slide = slides[i];
+        const card = document.createElement('div');
+        card.className = 'slide-card';
+        card.style.animationDelay = `${i * 0.08}s`;
+
+        const typeClass = {
+          title: 'badge-title',
+          diagram: 'badge-diagram',
+          chart: 'badge-chart',
+          content: 'badge-content'
+        }[slide.type] || 'badge-content';
+
+        const bulletContent = slide.content
+          ? slide.content.split('\n').map(line => {
+              if (line.startsWith('•') || line.startsWith('-')) {
+                return `<li>${line.replace(/^[•\-]\s*/, '')}</li>`;
+              }
+              return `<p>${line}</p>`;
+            }).join('')
+          : '';
+
+        const hasListItems = slide.content && (slide.content.includes('•') || slide.content.includes('\n-'));
+
+        card.innerHTML = `
+          <div class="slide-header">
+            <span class="slide-num">SLIDE ${slide.num || i + 1}</span>
+            <span class="slide-title">${slide.title}</span>
+            <span class="slide-type-badge ${typeClass}">${slide.type}</span>
+          </div>
+          <div class="slide-body">
+            <div class="slide-content-text">
+              ${hasListItems ? `<ul>${bulletContent}</ul>` : `<p>${slide.content || ''}</p>`}
+            </div>
+            ${slide.mermaid ? `<div class="mermaid-wrap"><div class="mermaid" id="mermaid-${i}">${slide.mermaid}</div></div>` : ''}
+            ${slide.speakerNote ? `<div class="slide-notes">${slide.speakerNote}</div>` : ''}
+          </div>
+        `;
+
+        area.appendChild(card);
+      }
+
+      // Render all mermaid diagrams
+      try {
+        await mermaid.run({
+          querySelector: '.mermaid'
+        });
+      } catch (e) {
+        console.warn('Some Mermaid diagrams had render issues:', e);
+      }
+    }
+
+    // ─── COPY / DOWNLOAD ──────────────────────────────────────────────────────
+    function copyJSON() {
+      navigator.clipboard.writeText(JSON.stringify(generatedSlides, null, 2));
+      showToast('JSON copied to clipboard!', 'success');
+    }
+
+    function copyMermaid() {
+      const all = generatedSlides
+        .filter(s => s.mermaid)
+        .map((s, i) => `// Slide ${s.num}: ${s.title}\n${s.mermaid}`)
+        .join('\n\n---\n\n');
+      navigator.clipboard.writeText(all);
+      showToast('Mermaid diagrams copied!', 'success');
+    }
+
+    function downloadPPTX() {
+      // In production: send generatedSlides to your Python backend (FastAPI + python-pptx)
+      // For demo: download as JSON that the backend can use
+      const dataStr = JSON.stringify({ mode: selectedMode, slides: generatedSlides }, null, 2);
+      const blob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'research-kisser-slides.json';
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('JSON downloaded. Connect to your FastAPI backend to generate .pptx!', 'info');
+    }
+
+    // ─── TOAST ────────────────────────────────────────────────────────────────
+    function showToast(msg, type = 'error') {
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      if (type === 'success') toast.style.background = '#10b981';
+      if (type === 'info') toast.style.background = '#7c3aed';
+      toast.textContent = msg;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 4000);
+    }
+
+    // ─── DEMO MODE (no file needed) ───────────────────────────────────────────
+    // Pre-load demo text so users can try immediately
+    const demoText = `
+Title: Step Size and Accuracy Comparison of Euler and Fourth-Order Runge-Kutta Methods (RK4) on Oscillatory ODEs Using a Harmonic Oscillator Model Derived from Korean Pop Audio Signals
+
+Abstract:
+This study investigates the numerical accuracy of two ODE solvers—the Euler method and the fourth-order Runge-Kutta method (RK4)—when applied to oscillatory differential equations. We model a harmonic oscillator using frequency parameters extracted from Korean Pop (K-pop) audio signals. By comparing phase portraits and global error metrics across varying step sizes (h = 0.001 to h = 0.5), we demonstrate that RK4 maintains O(h^4) accuracy while Euler's method degrades rapidly for h > 0.1. Our results suggest that audio-derived oscillatory systems provide an intuitive pedagogical bridge between signal processing and numerical methods in differential equations.
+
+Methods:
+1. Audio Processing: We sampled 5 K-pop tracks and extracted dominant frequencies using Fast Fourier Transform (FFT). The mean frequency ω = 2.34 rad/s was used as the oscillator parameter.
+2. ODE Formulation: x'' + ω²x = 0, with initial conditions x(0) = 1, x'(0) = 0
+3. Numerical Solvers: Euler (1st order) and RK4 (4th order) implemented in Python/NumPy
+4. Evaluation: Global error E = max|x_exact - x_numerical| over t ∈ [0, 10s]
+
+Results:
+- At h=0.1: Euler error = 0.23, RK4 error = 0.00003
+- At h=0.01: Euler error = 0.024, RK4 error = 0.000000003
+- RK4 is ~7,600x more accurate at h=0.1
+- Euler diverges noticeably after t > 5s for h > 0.2
+
+Conclusion:
+RK4 is significantly superior for oscillatory systems. The K-pop frequency data provided a novel, reproducible way to parameterize the harmonic oscillator, making this a useful educational tool for connecting music, physics, and numerical analysis.
+    `.trim();
+
+    // Set demo text silently
+    uploadedText = demoText;
+    checkReady();
+  </script>
+
+</body>
+</html>

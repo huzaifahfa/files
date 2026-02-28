@@ -1,130 +1,97 @@
-# Research KISSer 🎯
-> Keep It Simple Stupid — Turn research PDFs into audience-tuned presentations
-> Powered by **Google Gemini Flash** (free tier)
+# 🚀 Research Visualizer
 
-## Quick Start
+**Making complex research understandable, fundable, and actionable.**
 
-### 1. Get a FREE Gemini API Key
-→ Go to https://aistudio.google.com/apikey
-→ Sign in with Google → Create API key → Copy it
+Great ideas often fail not because they’re weak, but because they’re hard to explain. **Research Visualizer** is an AI-powered platform that transforms dense academic research into clear, interactive visual stories. It dynamically tailors its output to the exact audience you’re communicating with—whether that’s a venture backer, a peer researcher, or a general audience.
 
-No credit card required. Generous free tier.
+---
 
-### 2. Clone & Install
+## 🎯 The Problem
+
+Researchers and innovators regularly struggle to bridge the communication gap. Specifically, they face challenges trying to:
+
+* Pitch technical ideas to non-technical decision-makers.
+* Justify research value and ROI to sponsors and funders.
+* Communicate across disciplines efficiently.
+* Translate dense papers, equations, or data into intuition.
+
+**The Result:** Promising research gets overlooked, funding conversations stall, and real-world impact is delayed.
+
+---
+
+## 💡 Our Solution
+
+Research Visualizer uses AI as infrastructure to understand the *structure* of your research—not just summarize it. It generates visual, context-aware presentations that adapt to who’s in the room.
+
+**What you upload:**
+* A research abstract, full paper, or proposal.
+* Equations, code snippets, or raw datasets.
+* Domain-specific data like audio, signals, or simulations.
+
+**What you get:**
+* Intuition-first visual explanations.
+* Interactive diagrams and structural flowcharts.
+* Multiple presentation "views" tailored perfectly to your audience's context.
+
+---
+
+## 🧠 Context-Aware Storytelling (The Magic)
+
+Unlike static slides or generic chat tools, Research Visualizer dynamically adapts its output to turn research into a conversation. 
+
+Imagine uploading a computational mathematics project comparing Euler and Runge-Kutta methods on a harmonic oscillator model derived from audio signals. Here is how the platform adapts that single upload:
+
+* **Sponsors & Funders:** Focuses on computational efficiency gains, real-world applications in audio software, and ROI.
+* **Venture Backers:** Highlights scalability, market differentiation, and commercial opportunity.
+* **Peer Researchers:** Delivers deep dives into mathematical rigor, error margins, stability regions, and methodology.
+* **Students:** Provides step-by-step interactive diagrams showing how the algorithms handle step sizes differently.
+* **General Audience:** Uses plain-language analogies and visual animations to explain the core concept without equations.
+
+---
+
+## 🤖 Why This Isn’t a "ChatGPT Wrapper"
+
+We use AI to architect understanding, not just to generate text. 
+
+* **Structured Decomposition:** Research is broken down into core components (models, methods, data, goals).
+* **Targeted Generation:** Visual modules are selected based on the specific research type.
+* **Factual Grounding:** Explanations are strictly grounded in the provided math and data, preventing hallucination.
+* **Visual Priority:** Outputs prioritize visual understanding and spatial layout over walls of text.
+
+The result is trustable, explainable, and highly reusable research communication.
+
+---
+
+## 🏗️ Built For Innovation Teams
+
+Research Visualizer is the ultimate translation layer for anywhere research needs to be understood before it can be supported:
+
+* Research labs and universities
+* Startups working on deep tech
+* Nonprofits and policy organizations
+* Sponsors evaluating technical proposals
+* Educators and student researchers
+
+---
+
+## 🌱 Vision
+
+We believe the future of research isn’t just about discovering new ideas—it’s about making those ideas accessible. Research Visualizer helps ideas travel the critical path: **PDF → Understanding → Support → Real-World Impact.**
+
+---
+
+## 🛠️ Installation & Setup
+
+Follow these steps to get Research Visualizer running locally on your machine.
+
+### 1. Prerequisites
+Ensure you have [Node.js](https://nodejs.org/) (v18 or higher) installed. 
+
+### 2. Clone & Install Dependencies
+Clone the repository and install the required packages. This project relies on `pptxgenjs` for client-side PowerPoint generation and `mermaid` for interactive diagrams.
+
 ```bash
+git clone [https://github.com/your-username/research-visualizer.git](https://github.com/your-username/research-visualizer.git)
+cd research-visualizer
 npm install
-```
-
-### 3. Set Up API Key
-Create a `.env.local` file in the project root:
-```
-GEMINI_API_KEY=AIzaSy...your-key-here
-```
-
-### 4. Run
-```bash
-npm run dev
-# → http://localhost:3000
-```
-
----
-
-## For the Hackathon Demo (No Server Needed)
-Open `research-kisser-app.html` directly in your browser.
-Paste your Gemini API key in the UI field and upload any PDF/TXT.
-The K-pop ODE research is pre-loaded so you can demo instantly.
-
----
-
-## File Structure
-
-```
-research-kisser/
-├── app/
-│   ├── page.tsx                  # Main UI
-│   ├── page.module.css           # Styles
-│   ├── layout.tsx                # Root layout
-│   └── api/
-│       └── generate/
-│           └── route.ts          # Gemini API endpoint
-├── components/
-│   └── MermaidDiagram.tsx        # Mermaid.js renderer (client-only)
-├── package.json                  # No Anthropic SDK needed!
-└── .env.local                    # GEMINI_API_KEY=AIza... (don't commit!)
-```
-
----
-
-## How It Works
-
-```
-User uploads PDF/TXT
-        ↓
-Select audience mode
-        ↓
-POST /api/generate  (server-side, key stays safe in .env.local)
-        ↓
-Gemini Flash parses research → structured JSON (6-8 slides)
-  - responseMimeType: "application/json" forces clean JSON output
-        ↓
-Frontend renders slide cards + Mermaid diagrams
-        ↓
-Export JSON → Python backend → .pptx file
-```
-
----
-
-## Why Gemini Flash?
-- ✅ Free tier — no credit card needed
-- ✅ `responseMimeType: "application/json"` — outputs pure JSON natively (no parsing hacks)
-- ✅ Fast — ~2-3 seconds per generation
-- ✅ 1M token context window — handles very large PDFs
-- ✅ No SDK needed — plain `fetch()` to their REST API
-
----
-
-## Audience Modes
-
-| Mode | Behavior |
-|------|----------|
-| 🤡 Dumbass | Zero jargon, pure analogies, entertaining |
-| 👦 Kid/Student | Fun comparisons, short sentences |
-| 👨‍👩‍👧 Parent/Public | Real-world impact, no equations |
-| 👩‍🏫 Professor | Full methodology, assumptions, related work |
-| 💰 Investor/VC | Problem size, ROI, novelty, clear ask |
-| 🧑‍🔬 Peer Researcher | Technical depth, gaps, future directions |
-
----
-
-## Connecting to Python Backend (for .pptx export)
-
-The frontend downloads a JSON file. Feed it to your FastAPI backend:
-
-```python
-# backend/main.py
-from fastapi import FastAPI
-from fastapi.responses import FileResponse
-from pptx import Presentation
-from pydantic import BaseModel
-
-app = FastAPI()
-
-class SlidesPayload(BaseModel):
-    mode: str
-    title: str
-    slides: list
-
-@app.post("/generate-pptx")
-async def generate_pptx(data: SlidesPayload):
-    prs = Presentation()
-    for slide_data in data.slides:
-        layout = prs.slide_layouts[1]
-        slide = prs.slides.add_slide(layout)
-        slide.shapes.title.text = slide_data["title"]
-        # Add mermaid image if present, add content, etc.
-    prs.save("/tmp/output.pptx")
-    return FileResponse("/tmp/output.pptx", filename="research-kisser.pptx")
-```
-
-Install: `pip install fastapi python-pptx uvicorn`
-Run: `uvicorn main:app --reload`
+npm install pptxgenjs mermaid

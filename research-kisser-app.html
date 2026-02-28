@@ -6,6 +6,8 @@
   <title>Research KISSer</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Cabinet+Grotesk:wght@400;500;700;800;900&display=swap');
 
@@ -687,7 +689,7 @@
       <span class="logo-kiss">KISS</span><span class="logo-er">er</span>
       <span class="logo-tag">KEEP IT SIMPLE STUPID</span>
     </div>
-    <div class="header-right">AI · PDF → PPTX · Mermaid.js</div>
+    <div class="header-right">AI · PDF → PPTX · Mermaid.js · Gemini Flash</div>
   </header>
 
   <!-- HERO -->
@@ -716,11 +718,14 @@
           <div class="file-dot"></div>
           <span id="fileName"></span>
         </div>
+        <button onclick="loadDemo()" style="background:none;border:1px solid var(--border);color:var(--muted);font-size:0.75rem;font-family:'DM Mono',monospace;padding:0.4rem 0.8rem;border-radius:6px;cursor:pointer;margin-top:0.5rem;width:100%;">
+          Use demo paper (Euler vs RK4)
+        </button>
       </div>
 
       <!-- AUDIENCE MODE -->
       <div class="panel-section">
-        <h3>02 — Select Audience</h3>
+        <h3 class="sectionLabel">02 — Select Audience</h3>
         <div class="mode-grid">
           <button class="mode-btn active" data-mode="dumbass" onclick="selectMode(this)">
             <span class="mode-emoji">🤡</span>
@@ -755,19 +760,7 @@
         </div>
       </div>
 
-      <!-- API KEY -->
-      <div class="panel-section">
-        <h3>03 — API Key (Claude)</h3>
-        <div class="api-input-wrap">
-          <input
-            type="password"
-            id="apiKey"
-            class="api-input"
-            placeholder="sk-ant-api03-..."
-          />
-          <button class="api-toggle" onclick="toggleApiKey()">👁</button>
-        </div>
-      </div>
+
 
       <!-- GENERATE -->
       <div class="panel-section">
@@ -805,9 +798,7 @@
 
         <!-- DOWNLOAD BAR -->
         <div class="download-bar" id="downloadBar" style="display:none;">
-          <button class="dl-btn" onclick="copyJSON()">📋 Copy JSON</button>
-          <button class="dl-btn" onclick="copyMermaid()">🔀 Copy Diagrams</button>
-          <button class="dl-btn primary" onclick="downloadPPTX()">⬇ Download .pptx</button>
+          <button class="dl-btn primary" id="pptxBtn" onclick="downloadPPTX()">⬇ Download .pptx</button>
         </div>
 
       </div>
@@ -821,6 +812,12 @@
     let uploadedText = '';
     let generatedSlides = [];
     let mermaidDiagrams = [];
+
+    // ─── PDF.JS SETUP ─────────────────────────────────────────────────────────
+    if (window['pdfjs-dist/build/pdf']) {
+      window['pdfjs-dist/build/pdf'].GlobalWorkerOptions.workerSrc =
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
 
     // ─── MERMAID INIT ─────────────────────────────────────────────────────────
     mermaid.initialize({
@@ -867,33 +864,54 @@
     });
 
     async function handleFile(file) {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        uploadedText = e.target.result;
-        if (file.name.endsWith('.pdf')) {
-          // For PDF, we just use the raw text (in production, use pdf.js or server-side)
-          uploadedText = `[PDF Content from: ${file.name}]\n\n` + e.target.result.slice(0, 8000);
+      uploadedText = '';
+      const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+
+      try {
+        if (isPdf) {
+          const pdfjsLib = window['pdfjs-dist/build/pdf'];
+          if (!pdfjsLib) throw new Error('PDF.js not loaded');
+
+          const arrayBuffer = await file.arrayBuffer();
+          const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+          const pagesToRead = Math.min(pdf.numPages, 30);
+          let text = `[Document: ${file.name} — ${pdf.numPages} pages]\n\n`;
+
+          for (let p = 1; p <= pagesToRead; p++) {
+            const page = await pdf.getPage(p);
+            const content = await page.getTextContent();
+            const pageText = content.items.map(item => item.str).join(' ').trim();
+            if (pageText) text += pageText + '\n\n';
+          }
+
+          uploadedText = text;
+        } else {
+          uploadedText = await file.text();
         }
-        uploadZone.classList.add('has-file');
-        document.getElementById('fileInfo').style.display = 'flex';
-        document.getElementById('fileName').textContent = file.name + ` (${(file.size / 1024).toFixed(1)} KB)`;
-        checkReady();
-      };
-      reader.readAsText(file);
+      } catch (err) {
+        showToast('Could not read file: ' + err.message, 'error');
+        return;
+      }
+
+      uploadZone.classList.add('has-file');
+      document.getElementById('fileInfo').style.display = 'flex';
+      document.getElementById('fileName').textContent = file.name + ` (${(file.size / 1024).toFixed(1)} KB)`;
+      checkReady();
     }
 
     function checkReady() {
-      const hasFile = uploadedText.length > 0;
-      const hasKey = document.getElementById('apiKey').value.trim().length > 10;
-      document.getElementById('generateBtn').disabled = !(hasFile && hasKey);
+      document.getElementById('generateBtn').disabled = !uploadedText;
     }
 
-    document.getElementById('apiKey').addEventListener('input', checkReady);
-
-    function toggleApiKey() {
-      const input = document.getElementById('apiKey');
-      input.type = input.type === 'password' ? 'text' : 'password';
+    function loadDemo() {
+      uploadedText = demoText;
+      uploadZone.classList.add('has-file');
+      document.getElementById('fileInfo').style.display = 'flex';
+      document.getElementById('fileName').textContent = 'demo-euler-rk4.txt (built-in)';
+      checkReady();
     }
+
+    function toggleApiKey() {} // no-op, kept to avoid reference errors
 
     // ─── PROGRESS LOG ─────────────────────────────────────────────────────────
     function log(msg, status = 'done') {
@@ -926,8 +944,7 @@
 
     // ─── MAIN GENERATE ────────────────────────────────────────────────────────
     async function generate() {
-      const apiKey = document.getElementById('apiKey').value.trim();
-      if (!apiKey || !uploadedText) return;
+      if (!uploadedText) return;
 
       const btn = document.getElementById('generateBtn');
       btn.disabled = true;
@@ -943,12 +960,13 @@
       document.getElementById('downloadBar').style.display = 'none';
       clearLog();
 
-      log('Reading research content...', 'done');
-      log(`Audience mode: ${selectedMode}`, 'done');
-      log('Calling Claude API...', 'working');
+      const previewSnippet = uploadedText.slice(0, 120).replace(/\n/g, ' ').trim();
+      log(`Content loaded: "${previewSnippet}…"`, 'done');
+      log(`Audience: ${selectedMode} · ${uploadedText.length.toLocaleString()} chars`, 'done');
+      log('Calling Gemini API...', 'working');
 
       try {
-        const result = await callClaude(apiKey);
+        const result = await callGemini();
         clearLog();
         log('Research parsed ✓', 'done');
         log('Slides structured ✓', 'done');
@@ -978,92 +996,201 @@
       btn.textContent = '✦ Generate Presentation';
     }
 
-    // ─── CLAUDE API CALL ──────────────────────────────────────────────────────
-    async function callClaude(apiKey) {
+    // ─── CONFIG — paste your Gemini key here for the standalone HTML demo ───
+    const GEMINI_API_KEY = 'YOUR_GEMINI_KEY_HERE'; // only needed for this HTML file
+                                                    // Next.js reads from .env.local
+
+    // ─── ROBUST JSON PARSER ───────────────────────────────────────────────────
+    // State machine that only replaces literal control chars inside JSON strings,
+    // leaving structural whitespace (between tokens) untouched.
+    function fixControlCharsInStrings(str) {
+      let out = '';
+      let inStr = false;
+      let escaped = false;
+      for (let i = 0; i < str.length; i++) {
+        const c = str[i];
+        if (escaped)          { out += c; escaped = false; continue; }
+        if (c === '\\' && inStr) { out += c; escaped = true;  continue; }
+        if (c === '"')        { inStr = !inStr; out += c; continue; }
+        if (inStr) {
+          if (c === '\n')     { out += '\\n'; continue; }
+          if (c === '\r')     { if (str[i+1] === '\n') i++; out += '\\n'; continue; }
+          if (c === '\t')     { out += '\\t'; continue; }
+        }
+        out += c;
+      }
+      return out;
+    }
+
+    function robustJSONParse(str) {
+      // Strategy 1: direct parse (works when Gemini escapes correctly)
+      try { return JSON.parse(str); } catch (_) {}
+
+      // Strategy 2: extract outermost {...} block then direct parse
+      const objMatch = str.match(/\{[\s\S]*\}/);
+      const candidate = objMatch ? objMatch[0] : str;
+      try { return JSON.parse(candidate); } catch (_) {}
+
+      // Strategy 3: fix literal newlines/tabs inside string values, then parse
+      try { return JSON.parse(fixControlCharsInStrings(candidate)); } catch (_) {}
+
+      throw new Error(`JSON parse failed. Response preview: ${str.slice(0, 300)}`);
+    }
+
+    // ─── GEMINI API CALL ──────────────────────────────────────────────────────
+    async function callGemini() {
       const modeInstruction = modePrompts[selectedMode];
 
-      const systemPrompt = `You are Research KISSer, an AI that transforms dense academic research into clear, audience-specific presentations.
+      const audienceLabel = {
+        dumbass:   'General Public — zero jargon, pure analogies',
+        kid:       'Child / Student — fun, relatable, short sentences',
+        parent:    'Parent / Community Member — real-world impact first',
+        professor: 'Professor / Academic — rigorous, methodology-focused',
+        investor:  'Investor / VC — ROI, novelty, market size',
+        peer:      'Peer Researcher — technical depth, gaps, limitations'
+      }[selectedMode] || selectedMode;
 
+      const instructions = `You are Research KISSer. Your job is to read the research and produce a presentation grounded 100% in what the document actually says.
+
+═══ PRIME DIRECTIVE ═══
+Every fact, number, method, and conclusion you write MUST come directly from the research.
+Do NOT invent content, add outside knowledge, or use placeholder text.
+Adapt only the LANGUAGE and FRAMING to the audience — never the underlying facts.
+
+═══ AUDIENCE ═══
+${audienceLabel}
 ${modeInstruction}
 
-You must respond with ONLY valid JSON (no markdown, no backticks, no extra text) in this exact structure:
+═══ OUTPUT FORMAT ═══
+Respond with ONLY valid JSON. No markdown fences. No backticks. No explanation. Just JSON.
 
 {
-  "title": "presentation title",
+  "title": "The actual research title, reframed for the audience",
   "slides": [
-    {
-      "num": 1,
-      "type": "title",
-      "title": "slide title",
-      "content": "main content text or bullet points as a string (use \\n• for bullets)",
-      "speakerNote": "what the presenter should say",
-      "mermaid": null
-    },
-    {
-      "num": 2,
-      "type": "diagram",
-      "title": "slide title",
-      "content": "brief explanation of the diagram",
-      "speakerNote": "what the presenter should say",
-      "mermaid": "flowchart TD\\n  A[Start] --> B[Process]\\n  B --> C[End]"
-    }
+    { "num": 1, "type": "title",   "title": "...", "content": "...", "speakerNote": "...", "mermaid": null },
+    { "num": 2, "type": "content", "title": "...", "content": "...", "speakerNote": "...", "mermaid": null },
+    { "num": 3, "type": "diagram", "title": "...", "content": "...", "speakerNote": "...", "mermaid": "flowchart TD\\n  A[Step] --> B[Step]" },
+    { "num": 4, "type": "content", "title": "...", "content": "...", "speakerNote": "...", "mermaid": null },
+    { "num": 5, "type": "chart",   "title": "...", "content": "...", "speakerNote": "...", "mermaid": "xychart-beta\\n  title \\"...\\"\\n  x-axis [\\"A\\",\\"B\\"]\\n  y-axis \\"Label\\" 0 --> 100\\n  bar [40, 90]" },
+    { "num": 6, "type": "content", "title": "...", "content": "...", "speakerNote": "...", "mermaid": null },
+    { "num": 7, "type": "content", "title": "...", "content": "...", "speakerNote": "...", "mermaid": null }
   ]
 }
 
-Rules:
-- Generate exactly 6-8 slides
-- Slide types: "title", "content", "diagram", "chart"
-- At least 2 slides must have a mermaid diagram (set mermaid field to valid Mermaid.js syntax)
-- Mermaid diagrams must use: flowchart TD, mindmap, sequenceDiagram, or xychart-beta
-- For xychart-beta use format: xychart-beta\\n  title "..."\\n  x-axis [labels]\\n  y-axis "label"\\n  bar [values]
-- All Mermaid node text must be simple (no special chars that break parsing)
-- Adapt ALL content to the selected audience mode
-- speakerNote should be 1-2 sentences max
-- Keep content focused and punchy for the audience`;
+═══ SLIDE BLUEPRINT (follow this exactly) ═══
+Slide 1 — TITLE
+  • title: The research topic/title, reworded for the audience
+  • content: A 1-2 sentence hook that makes this audience care. Pull the core claim from the abstract.
+  • mermaid: null
 
-      const userMsg = `Here is the research content to transform into a presentation:
+Slide 2 — THE PROBLEM
+  • title: "The Problem" (or audience-appropriate equivalent)
+  • content: What gap or problem does this research address? Quote or closely paraphrase the intro/motivation. Use bullet points (\\n•).
+  • mermaid: null
 
+Slide 3 — HOW THEY DID IT (diagram)
+  • title: "The Method" (or equivalent)
+  • content: 1-2 sentences explaining the diagram
+  • mermaid: A flowchart showing the ACTUAL research methodology steps from the paper. Use real step names.
+
+Slide 4 — WHAT THEY FOUND
+  • title: "The Results" (or equivalent)
+  • content: The key findings with SPECIFIC numbers/metrics from the paper. Use bullet points (\\n•). At least 2 concrete data points.
+  • mermaid: null
+
+Slide 5 — THE DATA (chart)
+  • title: "The Numbers" (or equivalent)
+  • content: 1 sentence describing what the chart shows
+  • mermaid: An xychart-beta using ACTUAL data values from the paper's results section.
+
+Slide 6 — WHY IT MATTERS
+  • title: "Why This Matters" (or equivalent)
+  • content: Real-world implications for THIS audience specifically. What changes because of this research?
+  • mermaid: null
+
+Slide 7 — THE TAKEAWAY
+  • title: "Remember This" (or equivalent)
+  • content: The single most important thing for this audience to leave with. Punchy. Memorable.
+  • mermaid: null
+
+═══ MERMAID RULES (CRITICAL — invalid syntax causes rendering failure) ═══
+flowchart TD rules:
+  • Node IDs: single alphanumeric word only — A, B, C, Step1, Input (NO spaces, NO hyphens)
+  • Node labels in []: maximum 3 plain words — NO parentheses, commas, quotes, colons, slashes, or math
+  • Maximum 6 nodes total
+  • Arrows: --> only
+  • CORRECT: flowchart TD\\n  A[Collect Data] --> B[Run Model] --> C[Compare Results]
+  • WRONG: flowchart TD\\n  A[Collect Data (n=500)] --> B[Run Model] (has parentheses — INVALID)
+
+xychart-beta rules:
+  • Use real numbers from the paper
+  • x-axis labels: short strings in quotes inside []
+  • y-axis: label string then space then min --> max (integers only)
+  • bar values must all be numbers
+  • CORRECT: xychart-beta\\n  title "RK4 vs Euler Error"\\n  x-axis ["h=0.5","h=0.1","h=0.01"]\\n  y-axis "Error" 0 --> 1\\n  bar [0.23, 0.024, 0.000003]
+
+RESEARCH DOCUMENT:
 ---
-${uploadedText.slice(0, 6000)}
----
+${uploadedText.slice(0, 8000)}
+---`;
 
-Generate a ${selectedMode}-mode presentation with Mermaid.js diagrams. Remember: JSON only, no markdown.`;
+      const parts = [{ text: instructions }];
 
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+
+      const resp = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-calls': 'true'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'claude-opus-4-6',
-          max_tokens: 4000,
-          system: systemPrompt,
-          messages: [{ role: 'user', content: userMsg }]
+          contents: [{ role: 'user', parts }],
+          generationConfig: {
+            temperature: 0.4,
+            maxOutputTokens: 8192
+          }
         })
       });
 
       if (!resp.ok) {
-        const err = await resp.json();
-        throw new Error(err.error?.message || `API error ${resp.status}`);
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err?.error?.message || `Gemini API error ${resp.status}`);
       }
 
       const data = await resp.json();
-      const text = data.content[0].text.trim();
+      let raw = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
 
-      // Strip any accidental markdown fences
-      const cleaned = text.replace(/^```json\n?/, '').replace(/^```\n?/, '').replace(/\n?```$/, '').trim();
+      if (!raw) throw new Error('Gemini returned an empty response. Check your API key and try again.');
 
-      try {
-        return JSON.parse(cleaned);
-      } catch (e) {
-        // Try to extract JSON from the text
-        const match = cleaned.match(/\{[\s\S]*\}/);
-        if (match) return JSON.parse(match[0]);
-        throw new Error('Failed to parse AI response as JSON. Try again.');
+      // Fix literal control chars BEFORE any other processing —
+      // Gemini sometimes puts real newlines inside JSON string values
+      raw = fixControlCharsInStrings(raw);
+
+      const cleaned = raw.trim()
+        .replace(/^```json\s*/i, '')
+        .replace(/^```\s*/, '')
+        .replace(/\s*```$/, '')
+        .trim();
+
+      return robustJSONParse(cleaned);
+    }
+
+    // ─── MERMAID SANITIZER ────────────────────────────────────────────────────
+    // Post-processes AI-generated mermaid code to remove common invalid patterns
+    function sanitizeMermaid(code) {
+      if (!code) return code;
+      const trimmed = code.trim();
+      if (trimmed.startsWith('flowchart')) {
+        // Remove parentheses and their contents from inside node labels [...]
+        // e.g. [Collect Data (n=500)] → [Collect Data]
+        return trimmed.replace(/\[([^\]]*)\]/g, (_, label) => {
+          const clean = label
+            .replace(/\([^)]*\)/g, '')   // remove (...)
+            .replace(/[<>{}|]/g, '')      // remove other invalid chars
+            .replace(/\s+/g, ' ')
+            .trim();
+          return `[${clean || 'Step'}]`;
+        });
       }
+      return trimmed;
     }
 
     // ─── RENDER SLIDES ────────────────────────────────────────────────────────
@@ -1101,61 +1228,188 @@ Generate a ${selectedMode}-mode presentation with Mermaid.js diagrams. Remember:
 
         const hasListItems = slide.content && (slide.content.includes('•') || slide.content.includes('\n-'));
 
+        // Escape HTML entities for safe injection into innerHTML
+        const esc = s => (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
         card.innerHTML = `
           <div class="slide-header">
             <span class="slide-num">SLIDE ${slide.num || i + 1}</span>
-            <span class="slide-title">${slide.title}</span>
+            <span class="slide-title">${esc(slide.title)}</span>
             <span class="slide-type-badge ${typeClass}">${slide.type}</span>
           </div>
           <div class="slide-body">
             <div class="slide-content-text">
-              ${hasListItems ? `<ul>${bulletContent}</ul>` : `<p>${slide.content || ''}</p>`}
+              ${hasListItems ? `<ul>${bulletContent}</ul>` : `<p>${esc(slide.content)}</p>`}
             </div>
-            ${slide.mermaid ? `<div class="mermaid-wrap"><div class="mermaid" id="mermaid-${i}">${slide.mermaid}</div></div>` : ''}
-            ${slide.speakerNote ? `<div class="slide-notes">${slide.speakerNote}</div>` : ''}
+            ${slide.mermaid ? `<div class="mermaid-wrap"><div class="mermaid" id="mermaid-${i}"></div></div>` : ''}
+            ${slide.speakerNote ? `<div class="slide-notes">${esc(slide.speakerNote)}</div>` : ''}
           </div>
         `;
+
+        // Set mermaid code via textContent — never via innerHTML — to avoid HTML corruption
+        if (slide.mermaid) {
+          const mEl = card.querySelector(`#mermaid-${i}`);
+          if (mEl) mEl.textContent = sanitizeMermaid(slide.mermaid);
+        }
 
         area.appendChild(card);
       }
 
-      // Render all mermaid diagrams
-      try {
-        await mermaid.run({
-          querySelector: '.mermaid'
-        });
-      } catch (e) {
-        console.warn('Some Mermaid diagrams had render issues:', e);
+      // Render each Mermaid diagram individually so one failure doesn't kill the rest
+      const mermaidEls = document.querySelectorAll('.mermaid[id]');
+      for (const el of mermaidEls) {
+        const code = el.textContent.trim();
+        try {
+          const { svg } = await mermaid.render('svg-' + el.id, code);
+          el.innerHTML = svg;
+        } catch (e) {
+          console.warn('Mermaid render error for', el.id, e);
+          el.innerHTML = `<div style="color:var(--muted);font-family:'DM Mono',monospace;font-size:0.75rem;padding:0.75rem;">
+            ⚠ Diagram could not be rendered (invalid syntax).<br>
+            <pre style="margin-top:0.5rem;overflow-x:auto;white-space:pre-wrap;color:var(--text);opacity:0.7;">${code.replace(/</g,'&lt;')}</pre>
+          </div>`;
+        }
       }
     }
 
-    // ─── COPY / DOWNLOAD ──────────────────────────────────────────────────────
-    function copyJSON() {
-      navigator.clipboard.writeText(JSON.stringify(generatedSlides, null, 2));
-      showToast('JSON copied to clipboard!', 'success');
+    // ─── SVG → BASE64 PNG (for embedding diagrams in PPTX) ───────────────────
+    function svgElementToPngBase64(svgEl) {
+      return new Promise((resolve) => {
+        try {
+          const clone = svgEl.cloneNode(true);
+          clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+          const svgStr = new XMLSerializer().serializeToString(clone);
+          const rect = svgEl.getBoundingClientRect();
+          const W = Math.max(rect.width, 200) * 2;
+          const H = Math.max(rect.height, 100) * 2;
+          const canvas = document.createElement('canvas');
+          canvas.width = W; canvas.height = H;
+          const ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#1a1a24';
+          ctx.fillRect(0, 0, W, H);
+          const img = new Image();
+          img.onload = () => { ctx.drawImage(img, 0, 0, W, H); resolve(canvas.toDataURL('image/png')); };
+          img.onerror = () => resolve(null);
+          const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+          img.src = URL.createObjectURL(blob);
+        } catch (_) { resolve(null); }
+      });
     }
 
-    function copyMermaid() {
-      const all = generatedSlides
-        .filter(s => s.mermaid)
-        .map((s, i) => `// Slide ${s.num}: ${s.title}\n${s.mermaid}`)
-        .join('\n\n---\n\n');
-      navigator.clipboard.writeText(all);
-      showToast('Mermaid diagrams copied!', 'success');
-    }
+    // ─── PPTX GENERATION ──────────────────────────────────────────────────────
+    async function downloadPPTX() {
+      if (!generatedSlides.length) return;
+      const btn = document.getElementById('pptxBtn');
+      btn.textContent = '⏳ Building PPTX...';
+      btn.disabled = true;
 
-    function downloadPPTX() {
-      // In production: send generatedSlides to your Python backend (FastAPI + python-pptx)
-      // For demo: download as JSON that the backend can use
-      const dataStr = JSON.stringify({ mode: selectedMode, slides: generatedSlides }, null, 2);
-      const blob = new Blob([dataStr], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'research-kisser-slides.json';
-      a.click();
-      URL.revokeObjectURL(url);
-      showToast('JSON downloaded. Connect to your FastAPI backend to generate .pptx!', 'info');
+      try {
+        const pptx = new PptxGenJS();
+        pptx.layout = 'LAYOUT_WIDE';
+
+        // Theme
+        const C = { bg: '0A0A0F', surface: '111118', surface2: '1A1A24',
+                    accent: '7C3AED', violet: 'A855F7', cyan: '06B6D4',
+                    light: 'E8E8F0', muted: '8B8BAA', dark: '0A0A0F',
+                    success: '10B981', warning: 'F59E0B' };
+
+        for (let i = 0; i < generatedSlides.length; i++) {
+          const s = generatedSlides[i];
+          const sl = pptx.addSlide();
+          sl.background = { color: C.bg };
+
+          // Top accent bar
+          sl.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: '100%', h: 0.07, fill: { color: C.accent } });
+
+          if (s.type === 'title') {
+            // Vertical accent line
+            sl.addShape(pptx.ShapeType.rect, { x: 0.6, y: 1.1, w: 0.06, h: 2.2, fill: { color: C.violet } });
+            sl.addText(s.title || '', {
+              x: 0.85, y: 1.1, w: 8.7, h: 1.4,
+              fontSize: 42, bold: true, color: C.light, fontFace: 'Calibri', valign: 'middle'
+            });
+            if (s.content) {
+              sl.addText(s.content, {
+                x: 0.85, y: 2.65, w: 7.5, h: 1.5,
+                fontSize: 20, color: C.muted, fontFace: 'Calibri', wrap: true
+              });
+            }
+          } else {
+            // Type badge color
+            const badgeColor = { diagram: C.cyan, chart: C.warning, content: C.violet }[s.type] || C.violet;
+
+            // Title
+            sl.addText(s.title || '', {
+              x: 0.4, y: 0.15, w: 9.2, h: 0.75,
+              fontSize: 28, bold: true, color: C.light, fontFace: 'Calibri', valign: 'middle'
+            });
+
+            // Type badge
+            sl.addShape(pptx.ShapeType.rect, {
+              x: 0.4, y: 0.92, w: 1.1, h: 0.28, fill: { color: badgeColor },
+              line: { color: badgeColor }, rounding: 0.1
+            });
+            sl.addText(s.type.toUpperCase(), {
+              x: 0.4, y: 0.92, w: 1.1, h: 0.28,
+              fontSize: 9, bold: true, color: C.dark, fontFace: 'Courier New', align: 'center', valign: 'middle'
+            });
+
+            // Try to embed mermaid diagram SVG
+            let diagramW = 0;
+            if (s.mermaid) {
+              const mEl = document.getElementById('mermaid-' + i);
+              const svgEl = mEl?.querySelector('svg');
+              if (svgEl) {
+                const png = await svgElementToPngBase64(svgEl);
+                if (png) {
+                  sl.addImage({ data: png, x: 5.1, y: 1.25, w: 4.6, h: 3.4 });
+                  diagramW = 4.8;
+                }
+              }
+            }
+
+            // Content text
+            const contentX = 0.4, contentW = diagramW ? 4.5 : 9.2;
+            const rawContent = (s.content || '').trim();
+            const lines = rawContent.split('\n').filter(l => l.trim());
+
+            if (lines.some(l => l.startsWith('•') || l.startsWith('-'))) {
+              const items = lines.map(l => {
+                const isBullet = l.startsWith('•') || l.startsWith('-');
+                return {
+                  text: l.replace(/^[•\-]\s*/, '').trim(),
+                  options: { bullet: isBullet ? { indent: 15 } : false, fontSize: 17, color: C.light, breakLine: true }
+                };
+              });
+              sl.addText(items, { x: contentX, y: 1.3, w: contentW, h: 3.5, fontFace: 'Calibri', valign: 'top' });
+            } else {
+              sl.addText(rawContent, {
+                x: contentX, y: 1.3, w: contentW, h: 3.5,
+                fontSize: 17, color: C.light, fontFace: 'Calibri', wrap: true, valign: 'top'
+              });
+            }
+          }
+
+          // Slide number
+          sl.addText(`${s.num || i + 1} / ${generatedSlides.length}`, {
+            x: 8.6, y: 5.15, w: 1.3, h: 0.3,
+            fontSize: 9, color: C.muted, align: 'right', fontFace: 'Calibri'
+          });
+
+          // Speaker notes
+          if (s.speakerNote) sl.addNotes(s.speakerNote);
+        }
+
+        const title = (generatedSlides[0]?.title || 'research-kisser').replace(/[^a-z0-9]/gi, '-').toLowerCase();
+        await pptx.writeFile({ fileName: `${title}.pptx` });
+        showToast('PPTX downloaded!', 'success');
+      } catch (err) {
+        showToast('PPTX error: ' + err.message, 'error');
+        console.error(err);
+      } finally {
+        btn.textContent = '⬇ Download .pptx';
+        btn.disabled = false;
+      }
     }
 
     // ─── TOAST ────────────────────────────────────────────────────────────────
@@ -1193,9 +1447,8 @@ Conclusion:
 RK4 is significantly superior for oscillatory systems. The K-pop frequency data provided a novel, reproducible way to parameterize the harmonic oscillator, making this a useful educational tool for connecting music, physics, and numerical analysis.
     `.trim();
 
-    // Set demo text silently
-    uploadedText = demoText;
-    checkReady();
+    // demoText kept for the "Try Demo" button — do NOT auto-load it.
+    // The generate button stays disabled until the user uploads a real file.
   </script>
 
 </body>

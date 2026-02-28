@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import styles from "./page.module.css";
 
 // Dynamically import MermaidDiagram (no SSR — mermaid is browser-only)
-const MermaidDiagram = dynamic(() => import("@/components/MermaidDiagram"), {
+const MermaidDiagram = dynamic(() => import("./components/MermaidDiagram"), {
   ssr: false,
   loading: () => (
     <div className={styles.mermaidLoading}>Rendering diagram...</div>
@@ -82,7 +82,7 @@ export default function Home() {
 
     try {
       setLogs(l => [...l, { msg: `Audience mode: ${mode}`, status: "done" }]);
-      setLogs(l => [...l, { msg: "Calling Claude API...", status: "working" }]);
+      setLogs(l => [...l, { msg: "Calling Gemini API...", status: "working" }]);
 
       const resp = await fetch("/api/generate", {
         method: "POST",
@@ -219,9 +219,6 @@ export default function Home() {
             >
               {loading ? "⏳ Generating..." : "✦ Generate Presentation"}
             </button>
-            <p className={styles.apiNote}>
-              Uses <code>ANTHROPIC_API_KEY</code> from your .env file
-            </p>
           </section>
         </aside>
 

@@ -1,9 +1,8 @@
 // app/api/generate/route.ts
-// Uses Google Gemini Flash (free tier) — set GEMINI_API_KEY in .env.local
-
 import { NextRequest, NextResponse } from "next/server";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY!;
+// Using the updated Gemini 2.5 Flash model
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
 
 // ─── AUDIENCE PROMPTS ─────────────────────────────────────────────────────────
@@ -17,52 +16,20 @@ const MODE_PROMPTS: Record<string, string> = {
 };
 
 // ─── PROMPT BUILDER ────────────────────────────────────────────────────────────
-const buildPrompt = (mode: string, text: string) => `
+const buildPrompt = (mode: string) => `
 You are Research KISSer, an AI that transforms dense academic research into clear, audience-specific presentations.
 
 AUDIENCE INSTRUCTIONS:
 ${MODE_PROMPTS[mode] || MODE_PROMPTS.dumbass}
 
-Transform the research below into a presentation. Respond with ONLY valid JSON — no markdown fences, no backticks, no extra text whatsoever.
-
-Required JSON structure:
-{
-  "title": "presentation title",
-  "slides": [
-    {
-      "num": 1,
-      "type": "title",
-      "title": "slide title",
-      "content": "main content text. use \\n• for bullet points",
-      "speakerNote": "1-2 sentence note for the presenter",
-      "mermaid": null
-    },
-    {
-      "num": 2,
-      "type": "diagram",
-      "title": "slide title",
-      "content": "brief explanation of what the diagram shows",
-      "speakerNote": "presenter note",
-      "mermaid": "flowchart TD\\n  A[Step One] --> B[Step Two]\\n  B --> C[Result]"
-    }
-  ]
-}
-
 STRICT RULES:
-- Generate exactly 6 to 8 slides total
-- Slide types must be one of: title, content, diagram, chart
-- At least 2 slides MUST include a mermaid diagram (non-null mermaid field)
-- Valid Mermaid diagram types: flowchart TD, mindmap, sequenceDiagram, xychart-beta
-- xychart-beta example: xychart-beta\\n  title "My Chart"\\n  x-axis ["A","B","C"]\\n  y-axis "Score" 0 --> 100\\n  bar [40, 75, 90]
-- Mermaid node labels: plain text only, no quotes or special characters inside []
-- Adapt every single slide to the audience mode above
-- Output JSON only — absolutely nothing else before or after the JSON
-- CRITICAL: Base your presentation ONLY on the research text provided below. Do NOT use external knowledge or make up content.
-
-RESEARCH TO TRANSFORM (USE THIS TEXT ONLY):
----
-${text.slice(0, 6000)}
----
+1. Generate exactly 6 to 8 slides total.
+2. Slide types must be one of: title, content, diagram, chart.
+3. At least 2 slides MUST include a mermaid diagram.
+4. MERMAID SYNTAX CRITICAL: Do NOT use quotes (""), parentheses (), or brackets [] inside your node labels.
+5. MERMAID SINGLE-LINE CRITICAL: You MUST use semicolons (;) to separate Mermaid statements instead of newlines. The entire mermaid string MUST be on a single line. Example: flowchart TD; A[Step 1] --> B[Step 2]; B --> C[Result];
+6. NO LITERAL NEWLINES: Do not use literal newline characters anywhere in your text fields. If you need a visual line break for bullet points, use the exact characters "\\n".
+7. Base your presentation ONLY on the research provided in the attached document.
 `.trim();
 
 // ─── ROUTE HANDLER ─────────────────────────────────────────────────────────────
@@ -75,16 +42,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { text, mode } = await req.json();
+    const { fileData, mode } = await req.json();
 
-    if (!text || !mode) {
+    if (!fileData || !fileData.base64 || !mode) {
       return NextResponse.json(
-        { error: "Missing text or mode in request body" },
+        { error: "Missing fileData or mode in request body" },
         { status: 400 }
       );
     }
 
-    // Call Gemini Flash
+    // Call Gemini API
     const geminiResp = await fetch(GEMINI_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -92,7 +59,15 @@ export async function POST(req: NextRequest) {
         contents: [
           {
             role: "user",
-            parts: [{ text: buildPrompt(mode, text) }],
+            parts: [
+              { text: buildPrompt(mode) },
+              {
+                inlineData: {
+                  mimeType: fileData.mimeType,
+                  data: fileData.base64
+                }
+              }
+            ],
           },
         ],
         generationConfig: {
@@ -112,10 +87,11 @@ export async function POST(req: NextRequest) {
                     type: { type: "string" },
                     title: { type: "string" },
                     content: { type: "string" },
-                    speakerNote: { type: "string" },
-                    mermaid: { type: "string" }
+                    speakerNote: { type: "string", nullable: true },
+                    mermaid: { type: "string", nullable: true }
                   },
-                  required: ["num", "type", "title", "content", "speakerNote"]
+                  // Removed mermaid and speakerNote from required so missing fields don't throw schema errors
+                  required: ["num", "type", "title", "content"]
                 }
               }
             },
@@ -133,7 +109,6 @@ export async function POST(req: NextRequest) {
 
     const geminiData = await geminiResp.json();
 
-    // Extract text from Gemini response
     const raw: string =
       geminiData?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
 
@@ -141,7 +116,6 @@ export async function POST(req: NextRequest) {
       throw new Error("Gemini returned an empty response. Try again.");
     }
 
-    // Clean any accidental fences (belt-and-suspenders)
     const cleaned = raw
       .trim()
       .replace(/^```json\n?/, "")
@@ -151,21 +125,25 @@ export async function POST(req: NextRequest) {
 
     let parsed;
     try {
+      // First attempt: Standard parse
       parsed = JSON.parse(cleaned);
     } catch (parseError) {
-      // Last resort: pull the first JSON object out of the string
-      const match = cleaned.match(/\{[\s\S]*\}/);
+      // Fallback: The LLM likely injected literal newlines into strings.
+      // Replacing literal newlines with spaces minifies the JSON and neutralizes the error.
+      console.warn("Standard JSON parse failed. Attempting aggressive newline scrub...");
+      
+      const scrubbed = cleaned.replace(/\n/g, " ").replace(/\r/g, "");
+      const match = scrubbed.match(/\{.*\}/);
+      
       if (match) {
         try {
           parsed = JSON.parse(match[0]);
         } catch (secondError) {
-          console.error("Raw Gemini response:", raw);
-          console.error("Cleaned response:", cleaned);
-          throw new Error(`JSON parse failed. Response preview: ${cleaned.slice(0, 500)}...`);
+          console.error("Fatal Parse Error on scrubbed string:", scrubbed);
+          throw new Error("JSON parse completely failed. The AI generated malformed text.");
         }
       } else {
-        console.error("Raw Gemini response:", raw);
-        throw new Error(`No JSON found in response. Preview: ${cleaned.slice(0, 200)}...`);
+        throw new Error("No JSON object could be extracted from the AI response.");
       }
     }
 

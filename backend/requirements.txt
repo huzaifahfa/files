@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+python-pptx
+pydantic
+pillow
+matplotlib
+requests

@@ -30,6 +30,11 @@ interface GenerationResult {
   slides: Slide[];
 }
 
+interface FileData {
+  base64: string;
+  mimeType: string;
+}
+
 // ─── AUDIENCE CONFIG ──────────────────────────────────────────────────────────
 const AUDIENCE_MODES: { id: AudienceMode; emoji: string; label: string; desc: string }[] = [
   { id: "dumbass", emoji: "🤡", label: "Dumbass", desc: "Zero jargon" },
@@ -50,7 +55,7 @@ const SLIDE_TYPE_COLORS: Record<SlideType, string> = {
 // ─── COMPONENT ────────────────────────────────────────────────────────────────
 export default function Home() {
   const [mode, setMode] = useState<AudienceMode>("dumbass");
-  const [uploadedText, setUploadedText] = useState("");
+  const [fileData, setFileData] = useState<FileData | null>(null);
   const [fileName, setFileName] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<GenerationResult | null>(null);
@@ -59,10 +64,21 @@ export default function Home() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ─── FILE HANDLING ─────────────────────────────────────────────────────────
-  const handleFile = useCallback(async (file: File) => {
-    const text = await file.text();
-    setUploadedText(text.slice(0, 8000));
+  const handleFile = useCallback((file: File) => {
     setFileName(file.name);
+    
+    const reader = new FileReader();
+    reader.onload = () => {
+      // FileReader result looks like "data:application/pdf;base64,JVBERi..."
+      const resultString = reader.result as string;
+      const base64String = resultString.split(',')[1]; // Grab just the base64 part
+      
+      setFileData({
+        base64: base64String,
+        mimeType: file.type || "application/pdf" // fallback if type is empty
+      });
+    };
+    reader.readAsDataURL(file);
   }, []);
 
   const onDrop = useCallback((e: React.DragEvent) => {
@@ -74,20 +90,20 @@ export default function Home() {
 
   // ─── GENERATE ──────────────────────────────────────────────────────────────
   const generate = async () => {
-    if (!uploadedText) return;
+    if (!fileData) return;
 
     setLoading(true);
     setResult(null);
-    setLogs([{ msg: "Reading research content...", status: "done" }]);
+    setLogs([{ msg: `Processing document: ${fileName}...`, status: "done" }]);
 
     try {
       setLogs(l => [...l, { msg: `Audience mode: ${mode}`, status: "done" }]);
-      setLogs(l => [...l, { msg: "Calling Gemini API...", status: "working" }]);
+      setLogs(l => [...l, { msg: "Calling Gemini API with PDF data...", status: "working" }]);
 
       const resp = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: uploadedText, mode }),
+        body: JSON.stringify({ fileData, mode }),
       });
 
       if (!resp.ok) {
@@ -126,6 +142,37 @@ export default function Home() {
     a.href = url;
     a.download = "research-kisser-slides.json";
     a.click();
+  };
+
+  const downloadPPTX = async () => {
+    if (!result) return;
+    
+    try {
+      setLogs(l => [...l, { msg: "Generating PowerPoint...", status: "working" }]);
+      
+      const resp = await fetch("http://localhost:8000/generate-pptx", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode, ...result }),
+      });
+
+      if (!resp.ok) {
+        throw new Error(`Failed to generate PowerPoint: ${resp.status}`);
+      }
+
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${result.title.replace(/[^a-z0-9]/gi, '_')}.pptx`;
+      a.click();
+      URL.revokeObjectURL(url);
+      
+      setLogs(l => [...l, { msg: "✓ PowerPoint downloaded!", status: "done" }]);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      setLogs(l => [...l, { msg: `Error: ${msg}`, status: "error" }]);
+    }
   };
 
   // ─── RENDER ────────────────────────────────────────────────────────────────
@@ -215,7 +262,7 @@ export default function Home() {
             <button
               className={`${styles.generateBtn} ${loading ? styles.loading : ""}`}
               onClick={generate}
-              disabled={!uploadedText || loading}
+              disabled={!fileData || loading}
             >
               {loading ? "⏳ Generating..." : "✦ Generate Presentation"}
             </button>
@@ -308,10 +355,8 @@ export default function Home() {
 
               {/* DOWNLOAD BAR */}
               <div className={styles.downloadBar}>
-                <button className={styles.dlBtn} onClick={copyJSON}>📋 Copy JSON</button>
-                <button className={styles.dlBtn} onClick={downloadJSON}>⬇ Download JSON</button>
-                <button className={`${styles.dlBtn} ${styles.dlPrimary}`} onClick={downloadJSON}>
-                  🎯 Export for PPTX
+                <button className={`${styles.dlBtn} ${styles.dlPrimary}`} onClick={downloadPPTX}>
+                  📊 Download PowerPoint
                 </button>
               </div>
             </>

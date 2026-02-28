@@ -95,3 +95,61 @@ git clone [https://github.com/your-username/research-visualizer.git](https://git
 cd research-visualizer
 npm install
 npm install pptxgenjs mermaid
+
+# Research KISSer
+
+## 3. Environment Variables
+
+Research Visualizer uses Google's Gemini 2.5 Flash model for multimodal document processing. Create a `.env.local` file in the root of your project and add your API key:
+
+```
+GEMINI_API_KEY=your_gemini_api_key_here
+```
+
+---
+
+## 4. Next.js Configuration (Crucial for PPTX Export)
+
+Because `pptxgenjs` is a universal library, Next.js needs to be told to ignore Node.js-specific file system modules when compiling for the browser.
+
+Ensure you have a `next.config.mjs` file in your root directory configured exactly like this:
+
+```js
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  reactStrictMode: true,
+  webpack: (config, { isServer }) => {
+    // Tell Webpack to ignore Node-specific modules for the client bundle
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        "node:fs": false,
+        path: false,
+        crypto: false,
+        stream: false,
+        os: false,
+      };
+    }
+    return config;
+  },
+};
+
+export default nextConfig;
+```
+
+---
+
+## 5. Run the Application
+
+Start the development server:
+
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser to start uploading PDFs and generating presentations!
+
+---
+
+> 🏆 **Hackathon Note:** This project was built as part of an AI for Productivity & Research hackathon, with a strict focus on solving real-world research communication barriers, interdisciplinary understanding, and sponsor-facing clarity.

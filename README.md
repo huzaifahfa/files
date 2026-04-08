@@ -1,4 +1,4 @@
-# 🚀 Research Visualizer
+# 🚀 Research Kisser — Visualize Your Research
 
 **Making complex research understandable, fundable, and actionable.**
 
